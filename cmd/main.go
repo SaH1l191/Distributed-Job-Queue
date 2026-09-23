@@ -25,6 +25,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	//buffered chan blocking op, receiving ctrl+c,stopping 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
