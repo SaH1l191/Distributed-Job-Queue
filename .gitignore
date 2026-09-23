@@ -1,0 +1,7 @@
+tmp/
+build-errors.log
+*.exe
+*.exe~
+*.test
+*.out
+*.prof
