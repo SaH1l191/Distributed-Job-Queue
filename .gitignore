@@ -5,3 +5,4 @@ build-errors.log
 *.test
 *.out
 *.prof
+mdFolder/
