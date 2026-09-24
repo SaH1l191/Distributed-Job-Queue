@@ -2,16 +2,24 @@ package queue
 
 import "container/heap"
 
-type Node[T any] struct {
+type node[T any] struct {
 	id    string
 	value T
 	idx   int
 }
 
 type IndexedHeap[T any] struct {
-	items []*Node[T]
-	byID  map[string]*Node[T]
+	items []*node[T]
+	byID  map[string]*node[T]
 	less  func(a T, b T) bool
+}
+
+func NewIndexedHeap[T any](less func(a T, b T) bool) *IndexedHeap[T] {
+	return &IndexedHeap[T]{
+		items: make([]*node[T], 0),
+		byID:  make(map[string]*node[T]),
+		less:  less,
+	}
 }
 
 func (h *IndexedHeap[T]) Len() int {
@@ -29,9 +37,9 @@ func (h *IndexedHeap[T]) Swap(i int, j int) {
 }
 
 func (h *IndexedHeap[T]) Push(x any) {
-	newNode := x.(*Node[T])
-	newNode.idx = len(h.items)
-	h.items = append(h.items, newNode)
+	newnode := x.(*node[T])
+	newnode.idx = len(h.items)
+	h.items = append(h.items, newnode)
 }
 
 func (h *IndexedHeap[T]) Pop() any {
@@ -53,7 +61,7 @@ func (h *IndexedHeap[T]) Put(id string, value T) {
 		heap.Fix(h, n.idx)
 		return
 	}
-	n := &Node[T]{
+	n := &node[T]{
 		id:    id,
 		value: value,
 		idx:   -1,
@@ -80,7 +88,7 @@ func (h *IndexedHeap[T]) PopMin() (id string, value T, ok bool) {
 		return "", zero, false
 	}
 
-	n := heap.Pop(h).(*Node[T])
+	n := heap.Pop(h).(*node[T])
 
 	return n.id, n.value, true
 }
@@ -101,11 +109,8 @@ func (h *IndexedHeap[T]) Has(id string) bool {
 	return exists
 }
 
-
-
-//generic indexedHeap of value<T> 
+//generic indexedHeap of value<T>
 //with custom sort,indexes,def ops like push.pop.peek.delete.upsert
 
 //later can be used with
 //inflight_queue,ready_queue,toBeScehduledQueue
-
