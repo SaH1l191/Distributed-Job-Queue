@@ -20,8 +20,11 @@ type Job struct {
 	ID      string          `json:"id"` //for idempotent producer
 	Payload json.RawMessage `json:"payload"`
 
-	Priority int // 0 > 1 > 2
-	State    JobState
+	Priority int      `json:"priority"` // 0 > 1 > 2
+	State    JobState `json:"state"`
+	Queue    string   `json:"queue"`
+
+	Fingerprint string `json:"fingerprint"`
 
 	Attempt     int `json:"attempt"`
 	MaxAttempts int `json:"max_attempts"`
@@ -35,6 +38,7 @@ type Job struct {
 	WorkerID       string    `json:"worker_id"`
 	LeaseEpoch     uint64    `json:"lease_epoch"`
 	LeaseExpiresAt time.Time `json:"lease_expires_at"`
+	AttemptStarted time.Time `json:"attempt_started"`
 
 	LastError string `json:"last_error"`
 

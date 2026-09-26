@@ -5,4 +5,4 @@ build-errors.log
 *.test
 *.out
 *.prof
-mdFolder/
+internal/app/
