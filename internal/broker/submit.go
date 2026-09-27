@@ -31,7 +31,7 @@ func (b *Broker) Submit(in SubmitInput) (models.Job, bool, error) {
 	//either scheduled or ready state
 	if !job.ScheduledAt.After(now) {
 		//ready here
-		b.makeReadyLocked(in.Queue, job)
+		b.makeReadyLocked(job)
 	} else {
 		//dealyed schedule at
 		b.delayed.Put(job.ID, job.ScheduledAt)

@@ -45,7 +45,7 @@ type Broker struct {
 	cfg      Config
 	jobs     map[string]*models.Job
 	delayed  *queue.IndexedHeap[time.Time]
-	ready    map[string]*queue.IndexedHeap[ReadyKey]
+	ready    *queue.IndexedHeap[ReadyKey]
 	inflight *queue.IndexedHeap[time.Time]
 
 	dlq []string
@@ -74,7 +74,9 @@ func NewBroker(clock clock.Clock, cfg Config) *Broker {
 				return a.Before(b)
 			},
 		),
-		ready: make(map[string]*queue.IndexedHeap[ReadyKey]),
+		ready: queue.NewIndexedHeap(func(a ReadyKey, b ReadyKey) bool {
+			return BetterReady(a, b)
+		}),
 		inflight: queue.NewIndexedHeap(
 			func(a time.Time, b time.Time) bool {
 				return a.Before(b)
@@ -85,4 +87,30 @@ func NewBroker(clock clock.Clock, cfg Config) *Broker {
 		wakeCh:  make(chan struct{}),
 	}
 
+}
+
+func (b *Broker) DelayedPeek() (string, time.Time, bool) {
+	return b.delayed.Peek()
+}
+
+func (b *Broker) DelayedPop() string {
+	id, _, _ := b.delayed.PopMin()
+	return id
+}
+
+
+func (b *Broker) ClockNow() time.Time {
+	return b.clock.Now()
+}
+
+func (b *Broker) GetJob(id string) *models.Job {
+	return b.jobs[id]
+}
+
+func (b *Broker) MakeReadyLocked(job *models.Job) {
+	b.makeReadyLocked(job)
+}
+
+func (b *Broker) WakeCh() <-chan struct{} {
+	return b.wakeCh
 }
