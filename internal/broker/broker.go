@@ -32,7 +32,7 @@ type SubmitInput struct {
 	Payload          []byte
 	Priority         int
 	Queue            string
-	Fingerprint      string
+	Fingerprint      string//dedup detction sha256
 	ScheduledAt      time.Time
 	MaxAttempts      int
 	ExecutionTimeout time.Duration
@@ -41,7 +41,7 @@ type SubmitInput struct {
 
 type Broker struct {
 	mu       sync.Mutex
-	clock    clock.Clock
+	clock    clock.Clock //fake injectable clock for testing/prod
 	cfg      Config
 	jobs     map[string]*models.Job
 	delayed  *queue.IndexedHeap[time.Time]
@@ -51,7 +51,7 @@ type Broker struct {
 	dlq []string
 	// completed *completedSet
 
-	epochSeq uint64 //monotonically increasing fencing toekn
+	epochSeq uint64 //monotonically increasing fencing toekn(incremented per claim)
 
 	//fifo seq for ready jobs
 	readySeq uint64
@@ -59,8 +59,8 @@ type Broker struct {
 	// workers map[string]*Worker
 
 	//notificaitons
-	readyCh chan struct{}
-	wakeCh  chan struct{}
+	readyCh chan struct{}// Closed when jobs become READY (long-poll)
+	wakeCh  chan struct{}// Signaled when earlier delayed job inserted
 }
 
 func NewBroker(clock clock.Clock, cfg Config) *Broker {
@@ -83,8 +83,8 @@ func NewBroker(clock clock.Clock, cfg Config) *Broker {
 			},
 		),
 		dlq:     make([]string, 0),
-		readyCh: make(chan struct{}),
-		wakeCh:  make(chan struct{}),
+		readyCh: make(chan struct{}), //Recalculate when the next delayed job is due.
+		wakeCh:  make(chan struct{}), //Recalculate when the next delayed job is due.
 	}
 
 }

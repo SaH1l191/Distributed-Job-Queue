@@ -13,3 +13,11 @@ type Clock interface{
 	Now() time.Time
 	NewTimer(d time.Duration) Timer
 }
+
+//eg : 
+// func waitForTimeout(c Clock, d time.Duration) {
+//     timer := c.NewTimer(d)
+//     defer timer.Stop()
+
+//     <-timer.C()
+// }

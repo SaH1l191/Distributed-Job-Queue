@@ -38,9 +38,9 @@ type Job struct {
 	WorkerID       string    `json:"worker_id"`
 	LeaseEpoch     uint64    `json:"lease_epoch"`
 	LeaseExpiresAt time.Time `json:"lease_expires_at"`
-	AttemptStarted time.Time `json:"attempt_started"`
+	AttemptStarted time.Time `json:"attempt_started"` //default is 1jan utc
 
 	LastError string `json:"last_error"`
 
-	CompletedAt *time.Time `json:"completed_at"`
+	CompletedAt *time.Time `json:"completed_at"` //ptrs default value is null,used to indicate job is not completed yet
 }

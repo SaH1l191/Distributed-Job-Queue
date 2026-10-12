@@ -23,6 +23,9 @@ func (f *FakeClock) NewTimer(d time.Duration) Timer {
 	return &fakeTimer{clock: f, duration: d}
 }
 
+
+
+
 type fakeTimer struct {
 	clock    *FakeClock
 	duration time.Duration

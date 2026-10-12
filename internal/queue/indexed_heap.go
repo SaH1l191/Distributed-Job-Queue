@@ -8,13 +8,26 @@ type node[T any] struct {
 	idx   int
 }
 
+
+//follows contract of container/heap interface
+//implementing push,pop,len,less,swap of heap
 type IndexedHeap[T any] struct {
 	items []*node[T]
 	byID  map[string]*node[T]
 	less  func(a T, b T) bool
 }
+//The heap.Push, heap.Pop, heap.Fix, and heap.
+// Remove functions belong to Go's standard library, container/heap. 
+// They implement the heap algorithms but rely on your IndexedHeap methods 
+// to interact with your data structure.
+
+// Go provides the algorithm; you provide the implementation that satisfies its contract and maintains your indexed-heap-specific state.
 
 func NewIndexedHeap[T any](less func(a T, b T) bool) *IndexedHeap[T] {
+
+	if(less == nil){
+		panic("less function cannot be nil")
+	}
 	return &IndexedHeap[T]{
 		items: make([]*node[T], 0),
 		byID:  make(map[string]*node[T]),
@@ -42,6 +55,8 @@ func (h *IndexedHeap[T]) Push(x any) {
 	h.items = append(h.items, newnode)
 }
 
+//not a complete minimum-removal
+//primitive
 func (h *IndexedHeap[T]) Pop() any {
 	lastIdx := len(h.items) - 1
 
@@ -55,10 +70,10 @@ func (h *IndexedHeap[T]) Pop() any {
 
 }
 
-func (h *IndexedHeap[T]) Put(id string, value T) {
+func (h *IndexedHeap[T]) Put(id string, value T) { //upsert
 	if n, exists := h.byID[id]; exists {
 		n.value = value
-		heap.Fix(h, n.idx)
+		heap.Fix(h, n.idx) //standard library uses the node's current index to restore the heap ordering
 		return
 	}
 	n := &node[T]{
@@ -68,6 +83,11 @@ func (h *IndexedHeap[T]) Put(id string, value T) {
 	}
 	h.byID[id] = n
 	heap.Push(h, n)
+	// /internal go heap handles everything
+	//Calls h.Push(n) to append the new node.
+	// Compares the new node with its parent using h.Less(...).
+	// If the heap property is violated, calls h.Swap(...).
+	// Repeats until the heap property is restored.
 
 }
 
@@ -89,6 +109,10 @@ func (h *IndexedHeap[T]) PopMin() (id string, value T, ok bool) {
 	}
 
 	n := heap.Pop(h).(*node[T])
+	//internal go heap handles heap algorithm 
+	// Calls Swap(0, lastIndex) to move the root to the end.
+	//Restores heap order using my Less() and Swap() methods
+	// Calls my Pop() method to remove that last element.
 
 	return n.id, n.value, true
 }
@@ -101,6 +125,10 @@ func (h *IndexedHeap[T]) Delete(id string) bool {
 	}
 
 	heap.Remove(h, n.idx)
+	// Uses your Swap() to move the target node to the end.
+	// Restores heap order using your Less() and Swap() methods where needed.
+	// Calls your Pop() to remove the target node from the slice.
+
 	return true
 }
 
