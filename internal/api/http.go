@@ -3,21 +3,23 @@ package api
 import (
 	"context"
 	"fmt"
-	"net/http"
-
+	broker "jobqueue/internal/broker"
 	"log/slog"
+	"net/http"
 )
 
 type App struct {
 	serv    *http.Server
 	context context.Context
 	logger  *slog.Logger
+	broker  *broker.Broker
 }
 
-func New(ctx context.Context, logger *slog.Logger) (*App, error) {
+func New(ctx context.Context, logger *slog.Logger, broker *broker.Broker) (*App, error) {
 	return &App{
 		context: ctx,
 		logger:  logger,
+		broker:  broker,
 	}, nil
 }
 

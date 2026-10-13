@@ -35,6 +35,13 @@ func (b *Broker) Submit(in SubmitInput) (models.Job, bool, error) {
 	} else {
 		//dealyed schedule at
 		b.delayed.Put(job.ID, job.ScheduledAt)
+
+		if _, headTime, ok := b.delayed.Peek(); ok {
+			if job.ScheduledAt.Before(headTime) {
+				close(b.wakeCh)
+				b.wakeCh = make(chan struct{})
+			}
+		}
 	}
 	//emit to observers
 
