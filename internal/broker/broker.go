@@ -25,6 +25,8 @@ type Config struct {
 	DefaultMaxAttempts      int
 	DefaultLeaseDuration    time.Duration
 	DefaultExecutionTimeout time.Duration
+	BackOffBase             time.Duration
+	BakoffCap               time.Duration
 }
 
 type SubmitInput struct {
@@ -32,7 +34,6 @@ type SubmitInput struct {
 	Payload          []byte
 	Priority         int
 	Queue            string
-	Fingerprint      string//dedup detction sha256
 	ScheduledAt      time.Time
 	MaxAttempts      int
 	ExecutionTimeout time.Duration
@@ -59,11 +60,20 @@ type Broker struct {
 	// workers map[string]*Worker
 
 	//notificaitons
-	readyCh chan struct{}// Closed when jobs become READY (long-poll)
-	wakeCh  chan struct{}// Signaled when earlier delayed job inserted
+	readyCh chan struct{} // Closed when jobs become READY (long-poll)
+	wakeCh  chan struct{} // Signaled when earlier delayed job inserted
 }
 
+////dedup detction sha256 -> calc fingerprint of queue+priority+payload
+
 func NewBroker(clock clock.Clock, cfg Config) *Broker {
+
+	if cfg.BackOffBase <= 0 {
+		cfg.BackOffBase = 500 * time.Millisecond
+	}
+	if cfg.BakoffCap <= 0 {
+		cfg.BakoffCap = 30 * time.Second
+	}
 
 	return &Broker{
 		clock: clock,
@@ -93,18 +103,29 @@ func (b *Broker) DelayedPeek() (string, time.Time, bool) {
 	return b.delayed.Peek()
 }
 
+func (b *Broker) NextDelayedAt() (time.Time, bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	_, at, ok := b.delayed.Peek()
+	return at, ok
+}
+
+
 func (b *Broker) DelayedPop() string {
 	id, _, _ := b.delayed.PopMin()
 	return id
 }
 
-
 func (b *Broker) ClockNow() time.Time {
 	return b.clock.Now()
 }
 
-func (b *Broker) GetJob(id string) *models.Job {
-	return b.jobs[id]
+func (b *Broker) GetJob(id string) (*models.Job, bool) {
+	j, ok := b.jobs[id]
+	if !ok {
+		return nil, false
+	}
+	return j, true
 }
 
 func (b *Broker) MakeReadyLocked(job *models.Job) {

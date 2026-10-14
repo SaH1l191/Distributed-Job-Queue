@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 	"fmt"
-	broker "jobqueue/internal/broker"
 	"log/slog"
 	"net/http"
+	broker "jobqueue/internal/broker"
 )
 
 type App struct {
@@ -27,9 +27,12 @@ func (a *App) Start(ctx context.Context) error {
 	a.logger.Info("Starting Application")
 
 	mux := http.NewServeMux()
+	SetupRoutes(mux, a.broker)
+	handler := loggingMiddleware(a.logger, mux)
+
 	a.serv = &http.Server{
 		Addr:    ":8080",
-		Handler: mux,
+		Handler: handler,
 	}
 	a.logger.Info("Application server initialized")
 
@@ -52,3 +55,4 @@ func (a *App) Stop(ctx context.Context) error {
 	a.logger.Info("Application stopped cleanly")
 	return nil
 }
+

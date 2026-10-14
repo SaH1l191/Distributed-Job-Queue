@@ -1,6 +1,9 @@
 package broker
 
-import "jobqueue/internal/models"
+import (
+	"jobqueue/internal/models"
+	"time"
+)
 
 func (b *Broker) notifyReadyLocked() {
 	close(b.readyCh) //closing a channel wakes all receivers.
@@ -11,6 +14,21 @@ func (b *Broker) notifyReadyLocked() {
 //close and replace => broadcast, losers jsut find empty heap and wait again ,
 //no polling -> no wasted CPU
 
+func (b *Broker) signalWakeLocked() {
+	close(b.wakeCh)
+	b.wakeCh = make(chan struct{})
+}
+
+func (b *Broker) putDelayedLocked(job *models.Job, at time.Time) {
+	_, headBefore, hadHead := b.delayed.Peek()
+	b.delayed.Put(job.ID, at)
+	job.ScheduledAt = at
+
+	_, headAfter, _ := b.delayed.Peek()
+	if !hadHead || headAfter.Before(headBefore) {
+		b.signalWakeLocked()
+	}
+}
 
 func (b *Broker) makeReadyLocked(job *models.Job) {
 	b.readySeq++

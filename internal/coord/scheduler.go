@@ -1,6 +1,7 @@
 package coord
 
 import (
+	"context"
 	"jobqueue/internal/broker"
 	"jobqueue/internal/clock"
 )
@@ -29,23 +30,27 @@ func NewScheduler(b *broker.Broker, clock clock.Clock) *Scheduler {
 //  or functionality. This separation of concerns allows
 //  for better modularity and testability of the code.
 
-func (s *Scheduler) Run() {
-	s.loop()
+func (s *Scheduler) Run(ctx context.Context) {
+	s.loop(ctx)
 }
 
-func (s *Scheduler) loop() {
+func (s *Scheduler) loop(ctx context.Context) {
 	for {
-		_, scheduledAt, ok := s.b.DelayedPeek()
+		if ctx.Err() != nil {
+			return
+		}
+
+		at, ok := s.b.NextDelayedAt()
 		if !ok {
-			s.waitForWake()
+			if !s.waitForWake(ctx) { //queues empty , instead of waiting , return and let the broker handle the wakeup
+				return
+			}
 			continue
 		}
 
-		now := s.clock.Now()
-		d := scheduledAt.Sub(now)
-
+		d := at.Sub(s.clock.Now())
 		if d <= 0 {
-			s.promoteDelayed()
+			s.b.PromoteDue()
 			continue
 		}
 
@@ -56,12 +61,16 @@ func (s *Scheduler) loop() {
 		case <-s.b.WakeCh():
 			timer.Stop()
 		}
-
 	}
 }
 
-func (s *Scheduler) waitForWake() {
-	<-s.b.WakeCh()
+func (s *Scheduler) waitForWake(ctx context.Context) bool {
+	select {
+	case <-s.b.WakeCh():
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 func (s *Scheduler) promoteDelayed() {
@@ -78,7 +87,7 @@ func (s *Scheduler) promoteDelayed() {
 		}
 		s.b.DelayedPop()
 
-		job := s.b.GetJob(id)
+		job, _ := s.b.GetJob(id)
 		if job != nil {
 			s.b.MakeReadyLocked(job)
 		}

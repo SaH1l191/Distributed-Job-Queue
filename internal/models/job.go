@@ -40,7 +40,28 @@ type Job struct {
 	LeaseExpiresAt time.Time `json:"lease_expires_at"`
 	AttemptStarted time.Time `json:"attempt_started"` //default is 1jan utc
 
+	Result json.RawMessage `json:"result"`
+
 	LastError string `json:"last_error"`
 
 	CompletedAt *time.Time `json:"completed_at"` //ptrs default value is null,used to indicate job is not completed yet
+}
+
+func (s JobState) String() string {
+	switch s {
+	case StateScheduled:
+		return "scheduled"
+	case StateReady:
+		return "ready"
+	case StateProcessing:
+		return "processing"
+	case StateCompleted:
+		return "completed"
+	case StateDead:
+		return "dead"
+	case StateCancelled:
+		return "cancelled"
+	default:
+		return "unknown"
+	}
 }
